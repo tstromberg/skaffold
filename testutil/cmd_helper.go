@@ -80,6 +80,16 @@ func CmdRunOut(command string, output string) *FakeCmd {
 	return newFakeCmd().AndRunOut(command, output)
 }
 
+// CmdRunWithOutput takes a command and an expected output.
+func CmdRunWithOutput(command, output string) *FakeCmd {
+	c := newFakeCmd()
+	return c.addRun(run{
+		command:    command,
+		output:     []byte(output),
+		pipeOutput: true,
+	})
+}
+
 func CmdRunOutErr(command string, output string, err error) *FakeCmd {
 	return newFakeCmd().AndRunOutErr(command, output, err)
 }

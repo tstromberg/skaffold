@@ -179,13 +179,22 @@ func (h *HelmDeployer) Dependencies() ([]string, error) {
 
 // Cleanup deletes what was deployed by calling Deploy.
 func (h *HelmDeployer) Cleanup(ctx context.Context, out io.Writer) error {
+	hv, err := h.binVer(ctx)
+	if err != nil {
+		return errors.Wrap(err, "binary version")
+	}
+
 	for _, r := range h.Releases {
 		releaseName, err := expand(r.Name, nil)
 		if err != nil {
 			return errors.Wrap(err, "cannot parse the release name template")
 		}
 
-		if err := h.exec(ctx, out, false, "delete", releaseName, "--purge"); err != nil {
+		args := []string{"delete", releaseName}
+		if hv.LT(semver.MustParse("3.0.0")) {
+			args = append(args, "--purge")
+		}
+		if err := h.exec(ctx, out, false, args...); err != nil {
 			return errors.Wrapf(err, "deleting %s", releaseName)
 		}
 	}
@@ -199,17 +208,19 @@ func (h *HelmDeployer) Render(context.Context, io.Writer, []build.Artifact, []La
 
 // exec executes the helm command, writing combined stdout/stderr to the provided writer
 func (h *HelmDeployer) exec(ctx context.Context, out io.Writer, useSecrets bool, arg ...string) error {
-	args := append([]string{"--kube-context", h.kubeContext}, arg...)
-	args = append(args, h.Flags.Global...)
+	args := arg
+	if args[0] != "version" {
+		args = append([]string{"--kube-context", h.kubeContext}, arg...)
+		args = append(args, h.Flags.Global...)
 
-	if h.kubeConfig != "" {
-		args = append(args, "--kubeconfig", h.kubeConfig)
+		if h.kubeConfig != "" {
+			args = append(args, "--kubeconfig", h.kubeConfig)
+		}
+
+		if useSecrets {
+			args = append([]string{"secrets"}, args...)
+		}
 	}
-
-	if useSecrets {
-		args = append([]string{"secrets"}, args...)
-	}
-
 	cmd := exec.CommandContext(ctx, "helm", args...)
 	cmd.Stdout = out
 	cmd.Stderr = out
@@ -224,15 +235,21 @@ func (h *HelmDeployer) deployRelease(ctx context.Context, out io.Writer, r lates
 		return nil, errors.Wrap(err, "cannot parse the release name template")
 	}
 
+	hv, err := h.binVer(ctx)
+	if err != nil {
+		return nil, errors.Wrap(err, "binary version")
+	}
+
 	opts := installOpts{
 		releaseName: releaseName,
 		upgrade:     true,
 		flags:       h.Flags.Upgrade,
 		force:       h.forceDeploy,
 		chartPath:   r.ChartPath,
+		helmVersion: hv,
 	}
 
-	if err := h.exec(ctx, ioutil.Discard, false, getArgs(releaseName)...); err != nil {
+	if err := h.exec(ctx, ioutil.Discard, false, getArgs(hv, releaseName)...); err != nil {
 		color.Yellow.Fprintf(out, "Helm release %s not installed. Installing...\n", releaseName)
 
 		opts.upgrade = false
@@ -289,7 +306,7 @@ func (h *HelmDeployer) deployRelease(ctx context.Context, out io.Writer, r lates
 	var b bytes.Buffer
 
 	// Be accepting of failure
-	if err := h.exec(ctx, &b, false, getArgs(releaseName)...); err != nil {
+	if err := h.exec(ctx, &b, false, getArgs(hv, releaseName)...); err != nil {
 		logrus.Warnf(err.Error())
 		return nil, nil
 	}
@@ -306,6 +323,7 @@ type installOpts struct {
 	chartPath   string
 	upgrade     bool
 	force       bool
+	helmVersion semver.Version
 }
 
 // installArgs calculates the correct arguments to "helm install"
@@ -323,7 +341,11 @@ func installArgs(r latest.HelmRelease, builds []build.Artifact, valuesSet map[st
 			args = append(args, "--recreate-pods")
 		}
 	} else {
-		args = append(args, "install", "--name", o.releaseName)
+		args = append(args, "install")
+		if o.helmVersion.LT(semver.MustParse("3.0.0")) {
+			args = append(args, "--name")
+		}
+		args = append(args, o.releaseName)
 		args = append(args, o.flags...)
 	}
 
@@ -432,8 +454,12 @@ func installArgs(r latest.HelmRelease, builds []build.Artifact, valuesSet map[st
 }
 
 // getArgs calculates the correct arguments to "helm get"
-func getArgs(releaseName string) []string {
-	return []string{"get", releaseName}
+func getArgs(v semver.Version, releaseName string) []string {
+	args := []string{"get"}
+	if v.GTE(semver.MustParse("3.0.0")) {
+		args = append(args, "all")
+	}
+	return append(args, releaseName)
 }
 
 // envVarForImage creates an environment map for an image and digest tag (fqn)
