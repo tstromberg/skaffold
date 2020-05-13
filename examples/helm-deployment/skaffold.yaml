@@ -5,6 +5,9 @@ build:
   - image: skaffold-helm
 deploy:
   helm:
+    flags:
+      install: ['--atomic']
+      upgrade: ['--atomic']  
     releases:
     - name: skaffold-helm
       chartPath: charts
