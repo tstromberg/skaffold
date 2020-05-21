@@ -54,9 +54,11 @@ func parseRuntimeObject(namespace string, b []byte) (*Artifact, error) {
 
 func parseReleaseInfo(namespace string, b *bufio.Reader) []Artifact {
 	var results []Artifact
+	i := 0
 
 	r := k8syaml.NewYAMLReader(b)
 	for {
+		i++
 		doc, err := r.Read()
 		if err == io.EOF {
 			break
@@ -70,12 +72,19 @@ func parseReleaseInfo(namespace string, b *bufio.Reader) []Artifact {
 			logrus.Infof("error parsing object from string: %s", err.Error())
 			continue
 		}
+
+		// The initial section of "helm get" is not a Kubernetes manifest
+		if i == 1 {
+			continue
+		}
+
 		obj, err := parseRuntimeObject(objNamespace, doc)
 		if err != nil {
-			logrus.Infof(err.Error())
-		} else {
-			results = append(results, *obj)
+			logrus.Warnf("unable to parse runtime object in section %d: %v", i, err.Error())
+			continue
 		}
+
+		results = append(results, *obj)
 	}
 
 	return results
