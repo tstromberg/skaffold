@@ -52,7 +52,7 @@ func parseRuntimeObject(namespace string, b []byte) (*Artifact, error) {
 	}, nil
 }
 
-func parseReleaseInfo(namespace string, b *bufio.Reader) []Artifact {
+func parseHelmGet(namespace string, b *bufio.Reader) []Artifact {
 	var results []Artifact
 	i := 0
 
@@ -80,7 +80,7 @@ func parseReleaseInfo(namespace string, b *bufio.Reader) []Artifact {
 
 		obj, err := parseRuntimeObject(objNamespace, doc)
 		if err != nil {
-			logrus.Warnf("unable to parse runtime object in section %d: %v", i, err.Error())
+			logrus.Errorf("unable to parse runtime object in section %d: %v", i, err.Error())
 			continue
 		}
 
