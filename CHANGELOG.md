@@ -1,3 +1,140 @@
+# v1.14.0 Release - 09/02/2020
+
+**Linux**
+`curl -Lo skaffold https://storage.googleapis.com/skaffold/releases/v1.14.0/skaffold-linux-amd64 && chmod +x skaffold && sudo mv skaffold /usr/local/bin`
+ 
+**macOS**
+`curl -Lo skaffold https://storage.googleapis.com/skaffold/releases/v1.14.0/skaffold-darwin-amd64 && chmod +x skaffold && sudo mv skaffold /usr/local/bin`
+ 
+**Windows**
+ https://storage.googleapis.com/skaffold/releases/v1.14.0/skaffold-windows-amd64.exe
+ 
+**Docker image**
+`gcr.io/k8s-skaffold/skaffold:v1.14.0`
+ 
+Note: This release comes with a new config version, `v2beta7`. To upgrade your skaffold.yaml, use `skaffold fix`. If you choose not to upgrade, skaffold will auto-upgrade as best as it can.
+
+
+Highlights:
+* Skaffold can now detect minikube clusters regardless of profile name
+* Skaffold now has support for debugging .NET Core containers
+* Statuscheck phase is seeing some UX improvements
+
+
+New Features:
+* Build debuggable containers [#4606](https://github.com/GoogleContainerTools/skaffold/pull/4606)
+* Add .NET Core container debugging support [#4699](https://github.com/GoogleContainerTools/skaffold/pull/4699)
+* Identify minikube cluster for any profile name [#4701](https://github.com/GoogleContainerTools/skaffold/pull/4701)
+* Add SKAFFOLD_CMDLINE environment variable to pass command-line [#4704](https://github.com/GoogleContainerTools/skaffold/pull/4704)
+* Hide minikube detection behind flag [#4745](https://github.com/GoogleContainerTools/skaffold/pull/4745)
+
+
+Fixes:
+* Handle ctrl-c in the middle of GetAllAuthConfigs() [#4603](https://github.com/GoogleContainerTools/skaffold/pull/4603)
+* Fix 4748: Panic with skaffold dev [#4750](https://github.com/GoogleContainerTools/skaffold/pull/4750)
+
+
+Updates:
+* Introduce Config interfaces [#4598](https://github.com/GoogleContainerTools/skaffold/pull/4598)
+* add pod initialization logic in diag and follow up some minor reporting changes. [#4690](https://github.com/GoogleContainerTools/skaffold/pull/4690)
+* Kpt Deployer Render() implementation and tests [#4708](https://github.com/GoogleContainerTools/skaffold/pull/4708)
+* Use ParseTolerant to parse Helm version because of missing patch version [#4712](https://github.com/GoogleContainerTools/skaffold/pull/4712)
+* Add explicit tests for Helm version parsing [#4715](https://github.com/GoogleContainerTools/skaffold/pull/4715)
+* drop codecov patch threshold to 40% [#4716](https://github.com/GoogleContainerTools/skaffold/pull/4716)
+* Add Kustomize Hydration to Kpt Deployer's Render method [#4719](https://github.com/GoogleContainerTools/skaffold/pull/4719)
+* Move kubernetes client into its own package [#4720](https://github.com/GoogleContainerTools/skaffold/pull/4720)
+* Move `DetectWSL` function into util package [#4721](https://github.com/GoogleContainerTools/skaffold/pull/4721)
+* Kpt Deployer Deploy() Implementation/Tests [#4723](https://github.com/GoogleContainerTools/skaffold/pull/4723)
+* Add test for using helm setFiles [#4735](https://github.com/GoogleContainerTools/skaffold/pull/4735)
+* Extending Workflow for Kpt Deployer (accepting additional arguments) [#4736](https://github.com/GoogleContainerTools/skaffold/pull/4736)
+* Fix slow test [#4740](https://github.com/GoogleContainerTools/skaffold/pull/4740)
+* Fix slow tests [#4741](https://github.com/GoogleContainerTools/skaffold/pull/4741)
+* Minikube cluster detection followup [#4742](https://github.com/GoogleContainerTools/skaffold/pull/4742)
+* Rename NewFromRunContext() to NewCLI() [#4743](https://github.com/GoogleContainerTools/skaffold/pull/4743)
+* Use the newer notation for integration tests [#4744](https://github.com/GoogleContainerTools/skaffold/pull/4744)
+* Leverage Config interfaces to simplify tests [#4754](https://github.com/GoogleContainerTools/skaffold/pull/4754)
+
+
+Dependency Updates:
+* Bump golangci lint v1.30.0 [#4739](https://github.com/GoogleContainerTools/skaffold/pull/4739)
+
+
+Docs Updates:
+* Update log-tailing.md [#4636](https://github.com/GoogleContainerTools/skaffold/pull/4636)
+* Change kpt deployer doc from Beta to Alpha [#4728](https://github.com/GoogleContainerTools/skaffold/pull/4728)
+
+
+Huge thanks goes out to all of our contributors for this release:
+
+- Appu Goundan
+- Boris Dudelsack
+- Brian C
+- Brian de Alwis
+- David Gageot
+- Felix Tran
+- Gaurav
+- Hasso Mehide
+- Julien Ammous
+- Marlon Gamez
+- MrLuje
+- Mridula
+- Nick Kubala
+- Tejal Desai
+- Tyler Schroeder
+- Yuwen Ma
+
+# v1.13.2 Release - 08/20/2020
+ 
+**Linux**
+`curl -Lo skaffold https://storage.googleapis.com/skaffold/releases/v1.13.2/skaffold-linux-amd64 && chmod +x skaffold && sudo mv skaffold /usr/local/bin`
+ 
+**macOS**
+`curl -Lo skaffold https://storage.googleapis.com/skaffold/releases/v1.13.2/skaffold-darwin-amd64 && chmod +x skaffold && sudo mv skaffold /usr/local/bin`
+ 
+**Windows**
+ https://storage.googleapis.com/skaffold/releases/v1.13.2/skaffold-windows-amd64.exe
+ 
+**Docker image**
+`gcr.io/k8s-skaffold/skaffold:v1.13.2`
+
+**This point release contains several usability fixes that should improve user experience, especially when running Skaffold through Cloud Code.**
+
+Highlights:
+* Suppress clutter from docker-credential-gcloud error messages [#4705](https://github.com/GoogleContainerTools/skaffold/pull/4705)
+* Remove remote rules [#4698](https://github.com/GoogleContainerTools/skaffold/pull/4698)
+* Simplify devLoopEvent message text [#4684](https://github.com/GoogleContainerTools/skaffold/pull/4684)
+* Return deployment status code when status check can't retrieve pods from cluster [#4683](https://github.com/GoogleContainerTools/skaffold/pull/4683)
+* Improved error message when skaffold config not found [#4679](https://github.com/GoogleContainerTools/skaffold/pull/4679)
+* Move all update checks to single function; enforce honoring updateCheck flag [#4677](https://github.com/GoogleContainerTools/skaffold/pull/4677)
+* Enable watch trigger only when either one of autoBuild, autoSync or autoDeploy is active [#4676](https://github.com/GoogleContainerTools/skaffold/pull/4676)
+* Move context validation to build phase so as to not interfere with deploy [#4657](https://github.com/GoogleContainerTools/skaffold/pull/4657)
+* Send update-check message to stderr [#4655](https://github.com/GoogleContainerTools/skaffold/pull/4655)
+* Make event handling sequential and set the correct timestamp [#4644](https://github.com/GoogleContainerTools/skaffold/pull/4644)
+
+# v1.13.1 Release - 08/04/2020
+ 
+**Linux**
+`curl -Lo skaffold https://storage.googleapis.com/skaffold/releases/v1.13.1/skaffold-linux-amd64 && chmod +x skaffold && sudo mv skaffold /usr/local/bin`
+ 
+**macOS**
+`curl -Lo skaffold https://storage.googleapis.com/skaffold/releases/v1.13.1/skaffold-darwin-amd64 && chmod +x skaffold && sudo mv skaffold /usr/local/bin`
+ 
+**Windows**
+ https://storage.googleapis.com/skaffold/releases/v1.13.1/skaffold-windows-amd64.exe
+ 
+**Docker image**
+`gcr.io/k8s-skaffold/skaffold:v1.13.1`
+
+**This is a hotfix release for a breaking issue causing our survey link to automatically open itself in a browser. The survey has been disabled completely as
+we investigate and fix the root cause of the issue. Sincere apologies to anyone who was adversely affected by this.**
+
+Highlights:
+* Fix CustomTagger docs [#4621](https://github.com/GoogleContainerTools/skaffold/pull/4621)
+* Disable survey prompt until the next release [#4629](https://github.com/GoogleContainerTools/skaffol
+d/pull/4629)
+* Clarify 'survey' command text [#4625](https://github.com/GoogleContainerTools/skaffold/pull/4625)
+
+
 # v1.13.0 Release - 07/30/2020
  
 **Linux**

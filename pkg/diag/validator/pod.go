@@ -64,6 +64,7 @@ var (
 		proto.StatusCode_STATUSCHECK_CONTAINER_WAITING_UNKNOWN: {},
 		proto.StatusCode_STATUSCHECK_UNKNOWN_UNSCHEDULABLE:     {},
 		proto.StatusCode_STATUSCHECK_SUCCESS:                   {},
+		proto.StatusCode_STATUSCHECK_POD_INITIALIZING:          {},
 	}
 )
 
@@ -74,11 +75,8 @@ type PodValidator struct {
 }
 
 // NewPodValidator initializes a PodValidator
-func NewPodValidator(k kubernetes.Interface, deployContext map[string]string) *PodValidator {
+func NewPodValidator(k kubernetes.Interface) *PodValidator {
 	rs := []Recommender{recommender.ContainerError{}}
-	if r, err := recommender.NewCustom(recommender.DiagDefaultRules, deployContext); err == nil {
-		rs = append(rs, r)
-	}
 	return &PodValidator{k: k, recos: rs}
 }
 
@@ -134,7 +132,18 @@ func getPodStatus(pod *v1.Pod) (proto.StatusCode, []string, error) {
 				// TODO(dgageot): Add EphemeralContainerStatuses
 				cs := append(pod.Status.InitContainerStatuses, pod.Status.ContainerStatuses...)
 				// See https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#container-states
-				return getContainerStatus(pod, cs)
+				statusCode, logs, err := getContainerStatus(pod, cs)
+				if statusCode == proto.StatusCode_STATUSCHECK_POD_INITIALIZING {
+					// Determine if an init container is still running and fetch the init logs.
+					for _, c := range pod.Status.InitContainerStatuses {
+						if c.State.Waiting != nil {
+							return statusCode, []string{}, fmt.Errorf("waiting for init container %s to start", c.Name)
+						} else if c.State.Running != nil {
+							return statusCode, getPodLogs(pod, c.Name), fmt.Errorf("waiting for init container %s to complete", c.Name)
+						}
+					}
+				}
+				return statusCode, logs, err
 			case v1.ConditionUnknown:
 				logrus.Debugf("Pod %q scheduling condition is unknown", pod.Name)
 				return proto.StatusCode_STATUSCHECK_UNKNOWN, nil, fmt.Errorf(c.Message)
@@ -291,7 +300,8 @@ func extractErrorMessageFromWaitingContainerStatus(po *v1.Pod, c v1.ContainerSta
 	// Extract meaning full error out of container statuses.
 	switch c.State.Waiting.Reason {
 	case podInitializing:
-		// container is waiting to run
+		// container is waiting to run. This could be because one of the init containers is
+		// still not completed
 		return proto.StatusCode_STATUSCHECK_POD_INITIALIZING, nil, nil
 	case containerCreating:
 		return proto.StatusCode_STATUSCHECK_CONTAINER_CREATING, nil, fmt.Errorf("creating container %s", c.Name)
@@ -333,13 +343,14 @@ func getPodLogs(po *v1.Pod, c string) []string {
 	if err != nil {
 		return []string{fmt.Sprintf("Error retrieving logs for pod %s. Try `%s`", po.Name, strings.Join(logCommand, " "))}
 	}
-	lines := strings.Split(string(logs), "\n")
+	output := strings.Split(string(logs), "\n")
 	// remove spurious empty lines (empty string or from trailing newline)
-	if len(lines) > 0 && len(lines[len(lines)-1]) == 0 {
-		lines = lines[:len(lines)-1]
-	}
-	for i, s := range lines {
-		lines[i] = fmt.Sprintf("[%s %s] %s", po.Name, c, s)
+	lines := make([]string, 0, len(output))
+	for _, s := range output {
+		if s == "" {
+			continue
+		}
+		lines = append(lines, fmt.Sprintf("[%s %s] %s", po.Name, c, s))
 	}
 	return lines
 }

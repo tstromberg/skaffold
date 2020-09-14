@@ -29,13 +29,14 @@ import (
 	"github.com/GoogleContainerTools/skaffold/pkg/skaffold/constants"
 	"github.com/GoogleContainerTools/skaffold/pkg/skaffold/docker"
 	"github.com/GoogleContainerTools/skaffold/pkg/skaffold/kubernetes"
+	kubernetesclient "github.com/GoogleContainerTools/skaffold/pkg/skaffold/kubernetes/client"
 	"github.com/GoogleContainerTools/skaffold/pkg/skaffold/schema/latest"
 )
 
 const initContainer = "kaniko-init-container"
 
 func (b *Builder) buildWithKaniko(ctx context.Context, out io.Writer, workspace string, artifact *latest.KanikoArtifact, tag string) (string, error) {
-	client, err := kubernetes.Client()
+	client, err := kubernetesclient.Client()
 	if err != nil {
 		return "", fmt.Errorf("getting Kubernetes client: %w", err)
 	}
@@ -85,10 +86,7 @@ func (b *Builder) copyKanikoBuildContext(ctx context.Context, workspace string, 
 
 	buildCtx, buildCtxWriter := io.Pipe()
 	go func() {
-		err := docker.CreateDockerTarContext(ctx, buildCtxWriter, workspace, &latest.DockerArtifact{
-			BuildArgs:      artifact.BuildArgs,
-			DockerfilePath: artifact.DockerfilePath,
-		}, b.insecureRegistries)
+		err := docker.CreateDockerTarContext(ctx, buildCtxWriter, workspace, artifact.DockerfilePath, artifact.BuildArgs, b.insecureRegistries)
 		if err != nil {
 			buildCtxWriter.CloseWithError(fmt.Errorf("creating docker context: %w", err))
 			return

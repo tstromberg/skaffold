@@ -30,7 +30,7 @@ import (
 	"github.com/GoogleContainerTools/skaffold/pkg/skaffold/config"
 	"github.com/GoogleContainerTools/skaffold/pkg/skaffold/deploy"
 	"github.com/GoogleContainerTools/skaffold/pkg/skaffold/event"
-	"github.com/GoogleContainerTools/skaffold/pkg/skaffold/kubernetes"
+	kubernetesclient "github.com/GoogleContainerTools/skaffold/pkg/skaffold/kubernetes/client"
 	kubectx "github.com/GoogleContainerTools/skaffold/pkg/skaffold/kubernetes/context"
 )
 
@@ -128,7 +128,7 @@ func (r *SkaffoldRunner) getCurrentContext() (*api.Context, error) {
 // failIfClusterIsNotReachable checks that Kubernetes is reachable.
 // This gives a clear early error when the cluster can't be reached.
 func failIfClusterIsNotReachable() error {
-	client, err := kubernetes.Client()
+	client, err := kubernetesclient.Client()
 	if err != nil {
 		return err
 	}
@@ -146,8 +146,8 @@ func (r *SkaffoldRunner) performStatusCheck(ctx context.Context, out io.Writer) 
 	start := time.Now()
 	color.Default.Fprintln(out, "Waiting for deployments to stabilize...")
 
-	err := statusCheck(ctx, r.labeller, r.runCtx, out)
-	if err != nil {
+	s := newStatusCheck(r.runCtx, r.labeller)
+	if err := s.Check(ctx, out); err != nil {
 		return err
 	}
 

@@ -22,8 +22,8 @@ import (
 	"github.com/GoogleContainerTools/skaffold/pkg/skaffold/schema/util"
 )
 
-// !!! WARNING !!! This config version is already released, please DO NOT MODIFY the structs in this file.
-const Version string = "skaffold/v2beta6"
+// This config version is not yet released, it is SAFE TO MODIFY the structs in this file.
+const Version string = "skaffold/v2beta8"
 
 // NewSkaffoldConfig creates a SkaffoldConfig
 func NewSkaffoldConfig() util.VersionedConfig {
@@ -191,7 +191,7 @@ type TaggerComponent struct {
 	Name string `yaml:"name,omitempty"`
 
 	// Component is a tagging strategy to be used in CustomTemplateTagger.
-	Component TagPolicy `yaml:",inline"`
+	Component TagPolicy `yaml:",inline" yamltags:"skipTrim"`
 }
 
 // BuildType contains the specific implementation and parameters needed
@@ -447,6 +447,9 @@ type DeployType struct {
 	// HelmDeploy *beta* uses the `helm` CLI to apply the charts to the cluster.
 	HelmDeploy *HelmDeploy `yaml:"helm,omitempty"`
 
+	// KptDeploy *alpha* uses the `kpt` CLI to manage and deploy manifests.
+	KptDeploy *KptDeploy `yaml:"kpt,omitempty"`
+
 	// KubectlDeploy *beta* uses a client side `kubectl apply` to deploy manifests.
 	// You'll need a `kubectl` CLI version installed that's compatible with your cluster.
 	KubectlDeploy *KubectlDeploy `yaml:"kubectl,omitempty"`
@@ -523,6 +526,73 @@ type KustomizeDeploy struct {
 	BuildArgs []string `yaml:"buildArgs,omitempty"`
 }
 
+// KptDeploy *alpha* uses the `kpt` CLI to manage and deploy manifests.
+type KptDeploy struct {
+	// ApplyDir is the path to the directory to deploy to the cluster.
+	ApplyDir string `yaml:"applyDir,omitempty"`
+
+	// Dir is the path to the directory to run kpt functions against.
+	Dir string `yaml:"dir,omitempty"`
+
+	// Fn adds additional configurations for `kpt fn`.
+	Fn KptFn `yaml:"fn,omitempty"`
+
+	// Live adds additional configurations for `kpt live`.
+	Live KptLive `yaml:"live,omitempty"`
+}
+
+// KptFn adds additional configurations used when calling `kpt fn`.
+type KptFn struct {
+	// FnPath is a directory to read functions from instead of the configuration directory.
+	FnPath string `yaml:"fnPath,omitempty"`
+
+	// Image is an image to be run as a function in lieu of running functions from a directory.
+	Image string `yaml:"image,omitempty"`
+
+	// NetworkName is the docker network to run the container in (default "bridge").
+	NetworkName string `yaml:"networkName,omitempty"`
+
+	// GlobalScope sets global scope for functions.
+	GlobalScope bool `yaml:"globalScope,omitempty"`
+
+	// Network enables network access for functions that declare it.
+	Network bool `yaml:"network,omitempty"`
+
+	// Mount is a list of storage options to mount to the fn image.
+	Mount []string `yaml:"mount,omitempty"`
+}
+
+// KptLive adds additional configurations used when calling `kpt live`.
+type KptLive struct {
+	// Apply adds additional configurations for `kpt live apply` commands.
+	Apply KptLiveApply `yaml:"apply,omitempty"`
+
+	// InventoryID is the identifier for a group of applied resources.
+	// This configuration is used when users do not specify `KptDeploy.ApplyDir`
+	// and `.kpt-hydrated/inventory-template.yaml` does not exist.
+	InventoryID string `yaml:"inventoryID,omitempty"`
+
+	// InventoryNamespace sets the namespace scope for `kpt live init`.
+	InventoryNamespace string `yaml:"inventoryNamespace,omitempty"`
+}
+
+// KptLiveApply adds additional configurations used when calling `kpt live apply`.
+type KptLiveApply struct {
+	// PollPeriod sets for the polling period for resource statuses. Default to 2s.
+	PollPeriod string `yaml:"pollPeriod,omitempty"`
+
+	// PrunePropagationPolicy sets the propagation policy for pruning.
+	// Possible settings are Background, Foreground, Orphan.
+	// Default to "Background".
+	PrunePropagationPolicy string `yaml:"prunePropagationPolicy,omitempty"`
+
+	// PruneTimeout sets the time threshold to wait for all pruned resources to be deleted.
+	PruneTimeout string `yaml:"pruneTimeout,omitempty"`
+
+	// ReconcileTimeout sets the time threshold to wait for all resources to reach the current status.
+	ReconcileTimeout string `yaml:"reconcileTimeout,omitempty"`
+}
+
 // HelmRelease describes a helm release to be deployed.
 type HelmRelease struct {
 	// Name is the name of the Helm release.
@@ -534,9 +604,11 @@ type HelmRelease struct {
 	// ValuesFiles are the paths to the Helm `values` files.
 	ValuesFiles []string `yaml:"valuesFiles,omitempty"`
 
-	// ArtifactOverrides are key value pairs.
-	// If present, Skaffold will send `--set-string` flag to Helm CLI and append all pairs after the flag.
-	ArtifactOverrides util.FlatMap `yaml:"artifactOverrides,omitempty,omitempty"`
+	// ArtifactOverrides are key value pairs where the
+	// key represents the parameter used in the `--set-string` Helm CLI flag to define a container
+	// image and the value corresponds to artifact i.e. `ImageName` defined in `Build.Artifacts` section.
+	// The resulting command-line is controlled by `ImageStrategy`.
+	ArtifactOverrides util.FlatMap `yaml:"artifactOverrides,omitempty"`
 
 	// Namespace is the Kubernetes namespace.
 	Namespace string `yaml:"namespace,omitempty"`
@@ -557,6 +629,11 @@ type HelmRelease struct {
 	// SetFiles are key-value pairs.
 	// If present, Skaffold will send `--set-file` flag to Helm CLI and append all pairs after the flag.
 	SetFiles map[string]string `yaml:"setFiles,omitempty"`
+
+	// CreateNamespace if `true`, Skaffold will send `--create-namespace` flag to Helm CLI.
+	// `--create-namespace` flag is available in Helm since version 3.2.
+	// Defaults is `false`.
+	CreateNamespace *bool `yaml:"createNamespace,omitempty"`
 
 	// Wait if `true`, Skaffold will send `--wait` flag to Helm CLI.
 	// Defaults to `false`.
@@ -590,7 +667,8 @@ type HelmRelease struct {
 	// Packaged parameters for packaging helm chart (`helm package`).
 	Packaged *HelmPackaged `yaml:"packaged,omitempty"`
 
-	// ImageStrategy adds image configurations to the Helm `values` file.
+	// ImageStrategy controls how an `ArtifactOverrides` entry is
+	// turned into `--set-string` Helm CLI flag or flags.
 	ImageStrategy HelmImageStrategy `yaml:"imageStrategy,omitempty"`
 }
 

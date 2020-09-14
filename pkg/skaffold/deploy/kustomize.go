@@ -34,7 +34,6 @@ import (
 	"github.com/GoogleContainerTools/skaffold/pkg/skaffold/config"
 	deploy "github.com/GoogleContainerTools/skaffold/pkg/skaffold/deploy/kubectl"
 	"github.com/GoogleContainerTools/skaffold/pkg/skaffold/event"
-	"github.com/GoogleContainerTools/skaffold/pkg/skaffold/runner/runcontext"
 	"github.com/GoogleContainerTools/skaffold/pkg/skaffold/schema/latest"
 	"github.com/GoogleContainerTools/skaffold/pkg/skaffold/util"
 	"github.com/GoogleContainerTools/skaffold/pkg/skaffold/warnings"
@@ -49,6 +48,7 @@ var (
 
 // kustomization is the content of a kustomization.yaml file.
 type kustomization struct {
+	Components            []string              `yaml:"components"`
 	Bases                 []string              `yaml:"bases"`
 	Resources             []string              `yaml:"resources"`
 	Patches               []patchWrapper        `yaml:"patches"`
@@ -99,12 +99,12 @@ type KustomizeDeployer struct {
 	globalConfig       string
 }
 
-func NewKustomizeDeployer(runCtx *runcontext.RunContext, labels map[string]string) *KustomizeDeployer {
+func NewKustomizeDeployer(cfg Config, labels map[string]string) *KustomizeDeployer {
 	return &KustomizeDeployer{
-		KustomizeDeploy:    runCtx.Pipeline().Deploy.KustomizeDeploy,
-		kubectl:            deploy.NewCLI(runCtx, runCtx.Pipeline().Deploy.KustomizeDeploy.Flags),
-		insecureRegistries: runCtx.GetInsecureRegistries(),
-		globalConfig:       runCtx.GlobalConfig(),
+		KustomizeDeploy:    cfg.Pipeline().Deploy.KustomizeDeploy,
+		kubectl:            deploy.NewCLI(cfg, cfg.Pipeline().Deploy.KustomizeDeploy.Flags),
+		insecureRegistries: cfg.GetInsecureRegistries(),
+		globalConfig:       cfg.GlobalConfig(),
 		labels:             labels,
 	}
 }
@@ -257,6 +257,7 @@ func dependenciesForKustomization(dir string) ([]string, error) {
 	deps = append(deps, path)
 
 	candidates := append(content.Bases, content.Resources...)
+	candidates = append(candidates, content.Components...)
 
 	for _, candidate := range candidates {
 		// If the file doesn't exist locally, we can assume it's a remote file and

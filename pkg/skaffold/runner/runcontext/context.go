@@ -58,9 +58,8 @@ func (rc *RunContext) CacheFile() string                         { return rc.Opt
 func (rc *RunContext) ConfigurationFile() string                 { return rc.Opts.ConfigurationFile }
 func (rc *RunContext) CustomLabels() []string                    { return rc.Opts.CustomLabels }
 func (rc *RunContext) CustomTag() string                         { return rc.Opts.CustomTag }
-func (rc *RunContext) DebugMode() bool                           { return rc.Opts.IsDebugMode() }
 func (rc *RunContext) DefaultRepo() *string                      { return rc.Opts.DefaultRepo.Value() }
-func (rc *RunContext) DevMode() bool                             { return rc.Opts.IsDevMode() }
+func (rc *RunContext) Mode() config.RunMode                      { return rc.Opts.Mode() }
 func (rc *RunContext) DigestSource() string                      { return rc.Opts.DigestSource }
 func (rc *RunContext) DryRun() bool                              { return rc.Opts.DryRun }
 func (rc *RunContext) ForceDeploy() bool                         { return rc.Opts.Force }
@@ -68,6 +67,7 @@ func (rc *RunContext) GetKubeConfig() string                     { return rc.Opt
 func (rc *RunContext) GetKubeNamespace() string                  { return rc.Opts.Namespace }
 func (rc *RunContext) GlobalConfig() string                      { return rc.Opts.GlobalConfig }
 func (rc *RunContext) MinikubeProfile() string                   { return rc.Opts.MinikubeProfile }
+func (rc *RunContext) DetectMinikube() bool                      { return rc.Opts.DetectMinikube }
 func (rc *RunContext) Muted() config.Muted                       { return rc.Opts.Muted }
 func (rc *RunContext) NoPruneChildren() bool                     { return rc.Opts.NoPruneChildren }
 func (rc *RunContext) Notification() bool                        { return rc.Opts.Notification }
